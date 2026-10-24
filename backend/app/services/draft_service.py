@@ -324,7 +324,8 @@ def recheck_quote(quote_id: Any, db: Session) -> Dict[str, Any]:
 
         # Check current product stock
         prod = it.product
-        if prod and prod.track_stock:
+        is_backorder_confirmed = (it.final or {}).get("decision") == "backorder"
+        if prod and prod.track_stock and not is_backorder_confirmed:
             available = max(0, (prod.stock_on_hand or 0) - (prod.reserved or 0))
             if available < int(it.qty):
                 code = "OUT_OF_STOCK" if available <= 0 else "STOCK_SHORT"
@@ -380,18 +381,32 @@ def apply_stock_decision(
     if decision_req.decision == "partial":
         if decision_req.qty is not None and decision_req.qty > 0:
             item.qty = decision_req.qty
-        item.stock_status = "partial_confirmed"
+        item.stock_status = "ok"
+        item.final = {"decision": "partial", "qty": float(item.qty), "note": decision_req.note}
         item.explain_text = (item.explain_text or "") + f" [Owner confirmed partial quote: {item.qty} {item.unit}]."
         # Recalculate line total
         if item.unit_price_snapshot:
             item.line_total = (item.qty * item.unit_price_snapshot).quantize(Decimal("0.01"))
 
     elif decision_req.decision == "backorder":
-        item.stock_status = "backorder_confirmed"
+        item.stock_status = "short"
+        item.final = {"decision": "backorder", "qty": float(item.qty), "note": decision_req.note}
         item.explain_text = (item.explain_text or "") + f" [Owner confirmed backorder: {decision_req.note or 'Standard lead time'}]."
 
+    elif decision_req.decision == "alternative":
+        if decision_req.alternative_product_id:
+            alt_prod = db.query(Product).filter(Product.id == decision_req.alternative_product_id).first()
+            if alt_prod:
+                item.product_id = alt_prod.id
+                item.unit_price_snapshot = alt_prod.sell_price
+                item.stock_status = "ok"
+                item.final = {"decision": "alternative", "product_id": str(alt_prod.id), "name": alt_prod.name}
+                item.explain_text = f"Switched to alternative product: {alt_prod.name} at ₹{alt_prod.sell_price}/{alt_prod.unit}."
+                item.line_total = (item.qty * item.unit_price_snapshot).quantize(Decimal("0.01"))
+
     elif decision_req.decision == "decline":
-        item.stock_status = "declined"
+        item.stock_status = "out_of_stock"
+        item.final = {"decision": "decline", "note": decision_req.note}
         item.qty = Decimal("0.00")
         item.line_total = Decimal("0.00")
         item.explain_text = "Item declined due to inventory shortage."
