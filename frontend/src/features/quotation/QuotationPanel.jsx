@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import priceListData from '../data/priceList.json';
+import priceListData from '../../data/priceList.json';
 
 /**
  * QuotationPanel — Contributor B

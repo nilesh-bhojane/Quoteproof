@@ -6,7 +6,7 @@ import QuotationPanel from './QuotationPanel.jsx';
 // ---------------------------------------------------------------------------
 
 // Mock the JSON import used by the component
-jest.mock('../data/priceList.json', () => [
+jest.mock('../../data/priceList.json', () => [
   { sku: 'DEMO001', description: 'Large box', unitPrice: 24 },
   { sku: 'SMALL001', description: 'Small box', unitPrice: 12 },
 ]);
