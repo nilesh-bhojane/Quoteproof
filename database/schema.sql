@@ -135,14 +135,7 @@ ALTER TABLE timings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 
--- Standard demo policies allowing access for app operations
-CREATE POLICY "Allow all operations on products" ON products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations on quotes" ON quotes FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations on quote_items" ON quote_items FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations on audit_log" ON audit_log FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations on timings" ON timings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations on ai_usage" ON ai_usage FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations on settings" ON settings FOR ALL USING (true) WITH CHECK (true);
+-- No policies on purpose. The backend connects as the postgres role. Do not add allow-all policies.
 
 -- Indexes for performance
 CREATE INDEX idx_products_name ON products(name);
