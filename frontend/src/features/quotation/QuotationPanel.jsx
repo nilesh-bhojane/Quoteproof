@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import priceListData from '../../data/priceList.json';
+import Timer from './Timer.jsx';
 
 /**
  * QuotationPanel — Contributor B (Integrated)
@@ -7,7 +8,7 @@ import priceListData from '../../data/priceList.json';
  * Editable quote table with review / approve / reject flow.
  * Matches extracted descriptions to known SKUs from the sample price list.
  * Calculates subtotal, configured tax and total in code (not in an LLM).
- * Blocks approval when any required field (qty, unitPrice) is unresolved.
+ * Blocks approval when any required field (qty, unitPrice) or "Approved by" name is unresolved.
  */
 export default function QuotationPanel({ initialItems, onRecordEvent }) {
   const [priceList, setPriceList] = useState([]);
@@ -17,6 +18,7 @@ export default function QuotationPanel({ initialItems, onRecordEvent }) {
   ]);
   const [taxRate, setTaxRate] = useState(18);
   const [status, setStatus] = useState('draft'); // draft | approved | rejected
+  const [approvedBy, setApprovedBy] = useState('Karan Sapate');
 
   // Load the static price list
   useEffect(() => {
@@ -108,25 +110,24 @@ export default function QuotationPanel({ initialItems, onRecordEvent }) {
       maximumFractionDigits: 2,
     }).format(n);
 
-  // Approval is blocked when any item has qty <= 0 or unitPrice <= 0
+  // Approval is blocked when any item has qty <= 0 or unitPrice <= 0, or approvedBy is empty
   const unresolvedItems = items.filter(it => !(it.qty > 0 && it.unitPrice > 0));
-  const canApprove = unresolvedItems.length === 0 && items.length > 0;
+  const canApprove = unresolvedItems.length === 0 && items.length > 0 && approvedBy.trim().length > 0;
 
   function handleApprove() {
     setStatus('approved');
     const evt = {
       id: `evt-${Date.now()}`,
       event_type: 'approved',
-      title: 'Quotation approved by reviewer',
+      title: `Quotation approved by ${approvedBy}`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      details: `Approved total: ${money(total)} (${items.length} verified lines)`,
+      details: `Approved total: ${money(total)} (${items.length} verified lines). Approver: ${approvedBy}`,
     };
     if (onRecordEvent) onRecordEvent(evt);
-    // Post to backend audit trail API
-    fetch('/api/events', {
+    fetch('/api/v1/quotes/active-quote/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quote_id: 'quote-001', event_type: 'approved', details: { total, items: items.length } }),
+      body: JSON.stringify({ approved_by: approvedBy }),
     }).catch(() => {});
   }
 
@@ -140,11 +141,10 @@ export default function QuotationPanel({ initialItems, onRecordEvent }) {
       details: `Rejected quote with subtotal ${money(subtotal)}`,
     };
     if (onRecordEvent) onRecordEvent(evt);
-    // Post to backend audit trail API
-    fetch('/api/events', {
+    fetch('/api/v1/quotes/active-quote/reject', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quote_id: 'quote-001', event_type: 'rejected', details: { total } }),
+      body: JSON.stringify({ reason: 'Rejected during human review' }),
     }).catch(() => {});
   }
 
@@ -168,21 +168,24 @@ export default function QuotationPanel({ initialItems, onRecordEvent }) {
           <p className="eyebrow">CONTRIBUTOR B · VALIDATION & APPROVAL</p>
           <h2>Quotation review</h2>
         </div>
-        <span
-          className={
-            status === 'approved'
-              ? 'status success'
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Timer quoteId="active-quote" />
+          <span
+            className={
+              status === 'approved'
+                ? 'status success'
+                : status === 'rejected'
+                ? 'status warning'
+                : 'status'
+            }
+          >
+            {status === 'approved'
+              ? `Approved by ${approvedBy}`
               : status === 'rejected'
-              ? 'status warning'
-              : 'status'
-          }
-        >
-          {status === 'approved'
-            ? 'Approved for demo'
-            : status === 'rejected'
-            ? 'Rejected'
-            : 'Awaiting review'}
-        </span>
+              ? 'Rejected'
+              : 'Awaiting review'}
+          </span>
+        </div>
       </div>
 
       {/* Validation notice — shown when fields are unresolved */}
@@ -256,6 +259,20 @@ export default function QuotationPanel({ initialItems, onRecordEvent }) {
             <strong>{money(total)}</strong>
           </div>
         </div>
+      </div>
+
+      {/* Approval Details */}
+      <div style={{ marginTop: 16, marginBottom: 16, background: '#f8fafc', padding: '12px 16px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+        <label style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#4a5568' }}>Approved by (Required Owner Name):</span>
+          <input
+            type="text"
+            value={approvedBy}
+            onChange={e => setApprovedBy(e.target.value)}
+            placeholder="e.g. Karan Sapate (Owner)"
+            style={{ width: 220, padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+          />
+        </label>
       </div>
 
       {/* Action buttons — review / approve / reject */}
