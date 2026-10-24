@@ -7,6 +7,7 @@ The complete project is divided into TWO parts (CONTEXT.md section 9):
 
 At the start of every session:
 1. Read `CONTEXT.md` fully. It is the source of truth for scope, rules, data model, API and the work split.
+   `README.md` is only a short intro. If README.md or any older note in docs/ conflicts with CONTEXT.md, CONTEXT.md wins.
 2. Find out who I am. If I say "I am Person A" or "I am Person B", or a local `GEMINI.md` says so, believe it.
    If it is not clear, ask: "Are you Person A or Person B?" and wait.
 3. Reply in 5 lines or less: which part I own, which files are mine, and the next task from the Foundation or my part list.
@@ -45,5 +46,6 @@ Stack: React + Vite frontend, FastAPI backend, Supabase Postgres, Gemini API (Go
 - Keep the API shape in CONTEXT.md section 11. If it must change, propose the change first.
 
 ## Git
-- Branches: `part1-intake` (Person A), `part2-proof` (Person B). Never push straight to `main`.
-- Clear commit messages. Pull before starting work.
+- We work directly on `main`, no branches. Pull before starting, commit small, pull again right before pushing.
+- Never force-push. If there is a conflict, stop and tell me.
+- Clear commit messages.
