@@ -72,15 +72,21 @@ def validate_quote(items: list[dict], tax_rate: float = 0.0) -> dict:
             continue
 
         product = PRICE_LIST[sku]
-        line_total = round(qty * product["unit_price"], 2)
+        unit_price = product["unit_price"]
+        line_total = round(qty * unit_price, 2)
         subtotal += line_total
+
+        # "Why this price?" explanation per line
+        explain = f"Standard catalogue rate of ₹{unit_price:.2f}/{product['unit']} for {product['name']}."
+
         validated.append({
             "sku": sku,
             "name": product["name"],
             "quantity": qty,
             "unit": product["unit"],
-            "unit_price": product["unit_price"],
+            "unit_price": unit_price,
             "line_total": line_total,
+            "explain_text": explain,
         })
 
     # Ensure tax_rate is safe

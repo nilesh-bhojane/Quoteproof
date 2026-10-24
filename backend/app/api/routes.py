@@ -4,6 +4,7 @@ from typing import Any, Optional
 from app.services.extraction import extract_inquiry
 from app.services.quotation import validate_quote
 from app.services.analytics import record_event, get_events, calculate_roi, summary
+from app.services.masking_service import mask_pii
 
 router = APIRouter()
 
@@ -31,7 +32,11 @@ class RoiRequest(BaseModel):
 
 @router.post("/extract")
 def extract(request: ExtractRequest):
-    return extract_inquiry(request.inquiry_text)
+    # Mask any customer PII before extraction
+    masked_text, pii_mapping = mask_pii(request.inquiry_text)
+    result = extract_inquiry(masked_text)
+    result["pii_masked"] = len(pii_mapping) > 0
+    return result
 
 
 @router.post("/quotes/validate")
