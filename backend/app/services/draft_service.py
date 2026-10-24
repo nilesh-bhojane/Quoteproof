@@ -29,12 +29,12 @@ FALLBACK_CATALOG = [
     {
         "id": uuid.UUID("00000000-0000-0000-0000-000000000001"),
         "name": "Corrugated Box 12x10x8 (3-Ply)",
-        "aliases": ["box 12x10x8", "carton 12x10x8", "3-ply box"],
+        "aliases": ["box 12x10x8", "carton 12x10x8", "standard shipping box", "3-ply box"],
         "unit": "pcs",
         "sell_price": Decimal("24.00"),
         "cost_price": Decimal("18.00"),
         "min_margin_pct": Decimal("15.00"),
-        "bulk_tiers": [{"min_qty": 500, "unit_price": Decimal("22.00")}],
+        "bulk_tiers": [{"min_qty": 500, "unit_price": Decimal("22.00")}, {"min_qty": 2000, "unit_price": Decimal("20.00")}],
         "stock_on_hand": 5000,
         "reserved": 0,
         "track_stock": True,
@@ -43,12 +43,12 @@ FALLBACK_CATALOG = [
     {
         "id": uuid.UUID("00000000-0000-0000-0000-000000000002"),
         "name": "Heavy Duty Box 18x14x12 (5-Ply)",
-        "aliases": ["5-ply box", "heavy duty carton", "box 18x14x12"],
+        "aliases": ["5-ply box", "heavy duty carton", "box 18x14x12", "large box"],
         "unit": "pcs",
         "sell_price": Decimal("48.00"),
         "cost_price": Decimal("36.00"),
         "min_margin_pct": Decimal("20.00"),
-        "bulk_tiers": [],
+        "bulk_tiers": [{"min_qty": 200, "unit_price": Decimal("44.00")}],
         "stock_on_hand": 120,
         "reserved": 0,
         "track_stock": True,
@@ -57,13 +57,83 @@ FALLBACK_CATALOG = [
     {
         "id": uuid.UUID("00000000-0000-0000-0000-000000000003"),
         "name": "Die-Cut Mailer Box 10x8x3 (White E-Flute)",
-        "aliases": ["white mailer", "mailer box"],
+        "aliases": ["white mailer", "mailer box", "e-commerce box", "die cut box"],
         "unit": "pcs",
         "sell_price": Decimal("32.00"),
         "cost_price": Decimal("24.00"),
         "min_margin_pct": Decimal("20.00"),
         "bulk_tiers": [],
         "stock_on_hand": 0,
+        "reserved": 0,
+        "track_stock": True,
+        "price_updated_at": None,
+    },
+    {
+        "id": uuid.UUID("00000000-0000-0000-0000-000000000004"),
+        "name": "Air Bubble Roll 100m x 1m (50 GSM)",
+        "aliases": ["bubble wrap", "bubble roll", "air bubble packaging"],
+        "unit": "roll",
+        "sell_price": Decimal("850.00"),
+        "cost_price": Decimal("680.00"),
+        "min_margin_pct": Decimal("15.00"),
+        "bulk_tiers": [{"min_qty": 10, "unit_price": Decimal("800.00")}],
+        "stock_on_hand": 80,
+        "reserved": 0,
+        "track_stock": True,
+        "price_updated_at": None,
+    },
+    {
+        "id": uuid.UUID("00000000-0000-0000-0000-000000000005"),
+        "name": "Custom Brand Logo Printing (1-Color Screen)",
+        "aliases": ["logo printing", "screen print", "brand printing"],
+        "unit": "job",
+        "sell_price": Decimal("1200.00"),
+        "cost_price": Decimal("600.00"),
+        "min_margin_pct": Decimal("40.00"),
+        "bulk_tiers": [],
+        "stock_on_hand": 0,
+        "reserved": 0,
+        "track_stock": False,
+        "price_updated_at": None,
+    },
+    {
+        "id": uuid.UUID("00000000-0000-0000-0000-000000000006"),
+        "name": "BOPP Brown Packaging Tape (48mm x 65m)",
+        "aliases": ["brown tape", "bopp tape", "packing tape", "carton tape"],
+        "unit": "roll",
+        "sell_price": Decimal("65.00"),
+        "cost_price": Decimal("48.00"),
+        "min_margin_pct": Decimal("20.00"),
+        "bulk_tiers": [{"min_qty": 72, "unit_price": Decimal("58.00")}],
+        "stock_on_hand": 600,
+        "reserved": 0,
+        "track_stock": True,
+        "price_updated_at": None,
+    },
+    {
+        "id": uuid.UUID("00000000-0000-0000-0000-000000000007"),
+        "name": "Manual Stretch Film Roll (4kg, 23 Micron)",
+        "aliases": ["stretch film", "pallet wrap", "cling film packaging"],
+        "unit": "roll",
+        "sell_price": Decimal("620.00"),
+        "cost_price": Decimal("510.00"),
+        "min_margin_pct": Decimal("15.00"),
+        "bulk_tiers": [{"min_qty": 20, "unit_price": Decimal("580.00")}],
+        "stock_on_hand": 150,
+        "reserved": 10,
+        "track_stock": True,
+        "price_updated_at": None,
+    },
+    {
+        "id": uuid.UUID("00000000-0000-0000-0000-000000000008"),
+        "name": "Corrugated Partition Dividers 12x10",
+        "aliases": ["partition", "box divider", "separator sheet"],
+        "unit": "pcs",
+        "sell_price": Decimal("8.50"),
+        "cost_price": Decimal("6.00"),
+        "min_margin_pct": Decimal("25.00"),
+        "bulk_tiers": [{"min_qty": 1000, "unit_price": Decimal("7.50")}],
+        "stock_on_hand": 2500,
         "reserved": 0,
         "track_stock": True,
         "price_updated_at": None,
@@ -324,7 +394,8 @@ def recheck_quote(quote_id: Any, db: Session) -> Dict[str, Any]:
 
         # Check current product stock
         prod = it.product
-        if prod and prod.track_stock:
+        is_backorder_confirmed = (it.final or {}).get("decision") == "backorder"
+        if prod and prod.track_stock and not is_backorder_confirmed:
             available = max(0, (prod.stock_on_hand or 0) - (prod.reserved or 0))
             if available < int(it.qty):
                 code = "OUT_OF_STOCK" if available <= 0 else "STOCK_SHORT"
@@ -380,18 +451,32 @@ def apply_stock_decision(
     if decision_req.decision == "partial":
         if decision_req.qty is not None and decision_req.qty > 0:
             item.qty = decision_req.qty
-        item.stock_status = "partial_confirmed"
+        item.stock_status = "ok"
+        item.final = {"decision": "partial", "qty": float(item.qty), "note": decision_req.note}
         item.explain_text = (item.explain_text or "") + f" [Owner confirmed partial quote: {item.qty} {item.unit}]."
         # Recalculate line total
         if item.unit_price_snapshot:
             item.line_total = (item.qty * item.unit_price_snapshot).quantize(Decimal("0.01"))
 
     elif decision_req.decision == "backorder":
-        item.stock_status = "backorder_confirmed"
+        item.stock_status = "short"
+        item.final = {"decision": "backorder", "qty": float(item.qty), "note": decision_req.note}
         item.explain_text = (item.explain_text or "") + f" [Owner confirmed backorder: {decision_req.note or 'Standard lead time'}]."
 
+    elif decision_req.decision == "alternative":
+        if decision_req.alternative_product_id:
+            alt_prod = db.query(Product).filter(Product.id == decision_req.alternative_product_id).first()
+            if alt_prod:
+                item.product_id = alt_prod.id
+                item.unit_price_snapshot = alt_prod.sell_price
+                item.stock_status = "ok"
+                item.final = {"decision": "alternative", "product_id": str(alt_prod.id), "name": alt_prod.name}
+                item.explain_text = f"Switched to alternative product: {alt_prod.name} at ₹{alt_prod.sell_price}/{alt_prod.unit}."
+                item.line_total = (item.qty * item.unit_price_snapshot).quantize(Decimal("0.01"))
+
     elif decision_req.decision == "decline":
-        item.stock_status = "declined"
+        item.stock_status = "out_of_stock"
+        item.final = {"decision": "decline", "note": decision_req.note}
         item.qty = Decimal("0.00")
         item.line_total = Decimal("0.00")
         item.explain_text = "Item declined due to inventory shortage."
