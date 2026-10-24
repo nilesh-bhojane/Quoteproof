@@ -111,8 +111,8 @@ Stock is checked after extraction + matching, at draft time and again at approva
 |---|---|
 | Frontend | React + Vite on Vercel (assumed; match what Person B already has). Designed first, then built against mock data through one `api` module with a mock switch, then pointed at the real backend |
 | Backend | Python 3.12, FastAPI, Pydantic, SQLAlchemy, pytest. Hosted on Render |
-| Database | Supabase Postgres. Schema in `database/schema.sql` (no migration tool). SQLite only for quick local tests |
-| AI | Google Gen AI SDK, Gemini. Model name comes from `GEMINI_MODEL` in `.env`, never hardcoded |
+| Database | Supabase Postgres. Schema in `database/schema.sql` (no migration tool). Connect with the **Session pooler** connection string (works on IPv4 networks and Render), stored as `DATABASE_URL` in `backend/.env`. SQLite only for quick local tests |
+| AI | Google Gen AI SDK, Gemini, free tier from Google AI Studio. Model name comes from `GEMINI_MODEL` in `.env`, never hardcoded. Use a current Flash or Flash-Lite ID copied from AI Studio's model list (older IDs such as 2.0 and 2.5 may be retired) |
 | IDE | Antigravity; code on GitHub |
 
 Free-tier note: free-tier prompts may be used by the provider for training, so masking is mandatory.
@@ -216,9 +216,11 @@ Everything after the draft exists, plus proof and pitch.
 CONTEXT.md, AGENTS.md, database/schema.sql, backend/app/main.py, core/, db/, models/, frontend/src/lib/api.*, theme, layout.
 
 ### Git rules
-- Branches: `part1-intake` (A) and `part2-proof` (B). Never push straight to `main`.
-- Merge to `main` at three checkpoints: end of foundation, midpoint (about hour 12), and the final freeze.
-- Pull before you start, push when you stop. Never commit `.env` or API keys.
+- We work directly on `main` (no branches), because each person owns different files.
+- Before you start: pull. Commit small and often. Pull again right before you push. Push as soon as something works.
+- Never edit a file the other person owns. For shared files, tell the other person first.
+- If Git reports a conflict, stop and ask for help. Never force-push and never discard the other person's changes.
+- Never commit `.env`, API keys, `venv/` or `node_modules/`.
 
 ### Rough clock (24 hours)
 - Hours 0 to 2: foundation. Hours 2 to 12: each builds their part. Hours 12 to 16: connect the parts, fix the handshakes.
