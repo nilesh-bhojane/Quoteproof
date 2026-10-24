@@ -1,47 +1,25 @@
-# QuoteProof AI — Hackathon Monorepo Starter
+# QuoteProof AI
 
-A 3-contributor starter for a single integrated web app: AI-assisted quotation drafting with human approval, an audit trail, and an ROI dashboard.
+AI-assisted quotation co-pilot for small B2B suppliers, with a human approval step, an evidence ledger and a measurable ROI.
+Built by Team Threshold for PRAGYAN 2K26 (Track 4, Problem Statement 4-01).
 
-## Team ownership
-- **Contributor A — Inquiry extraction**: `frontend/src/features/inquiry/`, `backend/app/services/extraction.py`
-- **Contributor B — Quote validation & approval**: `frontend/src/features/quotation/`, `backend/app/services/quotation.py`
-- **Contributor C — Audit log & ROI analytics**: `frontend/src/features/analytics/`, `backend/app/services/analytics.py`
-- **Integrator** owns shared app shell, API contracts, code review, and merges.
+**AI reads, code calculates, human approves, ledger proves.**
 
-Keep each person's work in separate feature branches and merge via pull requests into `main`. Do not have everyone edit the same `App.jsx`.
+## Start here
+- `CONTEXT.md`: the full project brief (scope, rules, data model, API, and the work split between Person A and Person B).
+- `AGENTS.md`: instructions that AI coding agents (Antigravity) read automatically.
 
-## Requirements
-- Node.js 20+ and npm
-- Python 3.11+
-- Git
+## Team split
+- **Person A**: Part 1, Inquiry to Draft
+- **Person B**: Part 2, Approval to Proof
 
-## Start frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+Tell Antigravity "I am Person A" or "I am Person B" at the start of a session.
 
-## Start backend
-```bash
-cd backend
-python -m venv .venv
-# Windows PowerShell: .venv\\Scripts\\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-API docs: http://127.0.0.1:8000/docs
-Frontend: Vite will print its local URL, usually http://localhost:5173
+## Folders
+`frontend/` · `backend/` · `database/` · `docs/`
 
-## Environment variables
-Copy `backend/.env.example` to `backend/.env`. Never commit real API keys or customer data.
+## Run locally
+Instructions will be added here once the foundation tasks are done.
 
-## Integration rules
-1. Agree on API contracts in `docs/API_CONTRACTS.md` before parallel work.
-2. Each contributor commits only their assigned feature and tests.
-3. Open a pull request; integrator checks it on the shared `dev` branch.
-4. Merge feature branches into `dev` one by one, resolve conflicts, test the integrated app, then merge `dev` into `main`.
-5. Keep `main` demo-ready. Use synthetic customer data during the hackathon.
-
-See `docs/GIT_WORKFLOW.md` and `docs/TEAM_TASKS.md`.
+## Status
+Foundation in progress. Features are listed as done in CONTEXT.md only after they are built and tested.
