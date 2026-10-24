@@ -99,7 +99,7 @@ def extract_inquiry_with_ai(
         )
 
     # Basic Mode bypass
-    if force_basic_mode or not settings.GEMINI_API_KEY:
+    if force_basic_mode or (not settings.GEMINI_API_KEY and client is None):
         basic_res = basic_extract_inquiry(text)
         items = [
             ExtractedItem(

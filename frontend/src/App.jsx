@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import InquiryPanel from './features/inquiry/InquiryPanel.jsx';
 import QuotationPanel from './features/quotation/QuotationPanel.jsx';
+import ProductsPanel from './features/products/ProductsPanel.jsx';
 import AnalyticsPanel from './features/analytics/AnalyticsPanel.jsx';
+import SettingsPanel from './features/settings/SettingsPanel.jsx';
 
 export default function App() {
-  const [active, setActive] = useState('Inquiry');
+  const [active, setActive] = useState('New Quote');
   const [transferredItems, setTransferredItems] = useState(null);
   const [auditEvents, setAuditEvents] = useState([]);
 
-  const tabs = ['Inquiry', 'Quotation', 'Evidence & ROI'];
+  // CONTEXT.md Section 12: 5 Core Screens
+  const tabs = ['New Quote', 'Price list & stock', 'Reports & Proof', 'Settings'];
 
   function handleTransferToQuote(items) {
     setTransferredItems(items);
@@ -20,11 +23,16 @@ export default function App() {
       details: `Transferred ${items.length} line items to quotation review`,
     };
     setAuditEvents(prev => [event, ...prev]);
-    setActive('Quotation');
+    setActive('New Quote');
   }
 
   function handleRecordEvent(event) {
     setAuditEvents(prev => [event, ...prev]);
+  }
+
+  function handleDataReset() {
+    setTransferredItems(null);
+    setAuditEvents([]);
   }
 
   return (
@@ -39,7 +47,7 @@ export default function App() {
             AI-assisted quotations. Evidence-backed productivity.
           </div>
         </div>
-        <div className="demo-pill">HACKATHON DEMO</div>
+        <div className="demo-pill">PRAGYAN 2K26 · PS 4-01</div>
       </header>
 
       <section className="intro">
@@ -54,9 +62,9 @@ export default function App() {
         </div>
         <div className="step-card">
           <div className="step-label">WORKFLOW</div>
-          <div>01&nbsp; Intake</div>
-          <div>02&nbsp; Validate</div>
-          <div>03&nbsp; Approve & measure</div>
+          <div>01&nbsp; Intake & Mask PII</div>
+          <div>02&nbsp; Match & Stock Check</div>
+          <div>03&nbsp; Approve & Measure ROI</div>
         </div>
       </section>
 
@@ -72,17 +80,26 @@ export default function App() {
         ))}
       </nav>
 
-      {active === 'Inquiry' && (
-        <InquiryPanel onTransferToQuote={handleTransferToQuote} />
+      {active === 'New Quote' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <InquiryPanel onTransferToQuote={handleTransferToQuote} />
+          <QuotationPanel
+            initialItems={transferredItems}
+            onRecordEvent={handleRecordEvent}
+          />
+        </div>
       )}
-      {active === 'Quotation' && (
-        <QuotationPanel
-          initialItems={transferredItems}
-          onRecordEvent={handleRecordEvent}
-        />
+
+      {active === 'Price list & stock' && (
+        <ProductsPanel />
       )}
-      {active === 'Evidence & ROI' && (
+
+      {active === 'Reports & Proof' && (
         <AnalyticsPanel externalEvents={auditEvents} />
+      )}
+
+      {active === 'Settings' && (
+        <SettingsPanel onDataReset={handleDataReset} />
       )}
 
       <footer>

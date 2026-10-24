@@ -19,7 +19,10 @@ def _build_product_response(p: Product) -> ProductResponse:
     days_diff = None
 
     if p.price_updated_at:
-        diff = now - p.price_updated_at
+        p_time = p.price_updated_at
+        if p_time.tzinfo is None:
+            p_time = p_time.replace(tzinfo=timezone.utc)
+        diff = now - p_time
         days_diff = diff.days
         if days_diff >= STALE_DAYS_THRESHOLD:
             is_stale = True
@@ -27,7 +30,7 @@ def _build_product_response(p: Product) -> ProductResponse:
     available = max(0, (p.stock_on_hand or 0) - (p.reserved or 0)) if p.track_stock else 999999
 
     return ProductResponse(
-        id=p.id,
+        id=p.id if isinstance(p.id, UUID) else UUID(str(p.id)),
         name=p.name,
         aliases=p.aliases or [],
         unit=p.unit,

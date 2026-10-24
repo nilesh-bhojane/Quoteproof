@@ -12,6 +12,18 @@ from sqlalchemy.orm import Session
 from app.models.audit import AuditLog
 
 
+def _to_uuid(val: Any) -> Optional[uuid.UUID]:
+    """Safely convert string or UUID to uuid.UUID object."""
+    if not val:
+        return None
+    if isinstance(val, uuid.UUID):
+        return val
+    try:
+        return uuid.UUID(str(val))
+    except (ValueError, AttributeError):
+        return uuid.uuid5(uuid.NAMESPACE_DNS, str(val))
+
+
 def log_event(
     action: str,
     actor: str,
@@ -21,24 +33,11 @@ def log_event(
     after: Optional[Dict[str, Any]] = None,
     db: Optional[Session] = None,
 ) -> Optional[AuditLog]:
-    """Append a traceable event to the Evidence Ledger (audit_log).
-
-    Args:
-        action: Event action name (e.g. "draft_extracted", "stock_decision", "quote_approved").
-        actor: One of 'ai', 'human', or 'system'.
-        quote_id: UUID or string ID of associated quotation.
-        correlation_id: Optional correlation string for tracing requests.
-        before: State before action.
-        after: State after action.
-        db: Active SQLAlchemy database session (if writing to DB).
-
-    Returns:
-        The instantiated or persisted AuditLog record.
-    """
+    """Append a traceable event to the Evidence Ledger (audit_log)."""
     event = AuditLog(
         id=uuid.uuid4(),
         correlation_id=correlation_id or f"corr-{uuid.uuid4().hex[:8]}",
-        quote_id=uuid.UUID(str(quote_id)) if quote_id else None,
+        quote_id=_to_uuid(quote_id),
         actor=actor,
         action=action,
         before=before or {},
