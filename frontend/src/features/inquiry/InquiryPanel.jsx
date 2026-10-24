@@ -1,10 +1,11 @@
 import { useState } from 'react';
 
-const sample = 'Need 500 boxes 12x10x8, 3-ply, and 200 smaller ones. Delivery to Pune next week. What is the rate?';
+const sample =
+  'Need 500 boxes 12x10x8, 3-ply, and 200 smaller ones. Delivery to Pune next week. What is the rate?';
 
 export default function InquiryPanel() {
   const [inquiry, setInquiry] = useState(sample);
-  const [result, setResult] = useState(null);   // {items, missing_fields, warnings}
+  const [result, setResult] = useState(null); // {items, missing_fields, warnings}
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -12,7 +13,6 @@ export default function InquiryPanel() {
   // Helper – call backend extraction endpoint
   // ---------------------------------------------------------------------------
   function extract() {
-    // Reset state
     setResult(null);
     setError(null);
     setLoading(true);
@@ -20,7 +20,7 @@ export default function InquiryPanel() {
     fetch('/api/extract', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inquiry_text: inquiry })
+      body: JSON.stringify({ inquiry_text: inquiry }),
     })
       .then(res => {
         if (!res.ok) throw new Error(`Server responded ${res.status}`);
@@ -44,11 +44,22 @@ export default function InquiryPanel() {
       <textarea
         id="inquiry"
         value={inquiry}
-        onChange={e => { setInquiry(e.target.value); setResult(null); setError(null); }}
+        onChange={e => {
+          setInquiry(e.target.value);
+          setResult(null);
+          setError(null);
+        }}
         rows="5"
       />
       <div className="actions">
-        <button className="secondary" onClick={() => { setInquiry(sample); setResult(null); setError(null); }}>
+        <button
+          className="secondary"
+          onClick={() => {
+            setInquiry(sample);
+            setResult(null);
+            setError(null);
+          }}
+        >
           Load sample
         </button>
         <button className="primary" onClick={extract}>
@@ -71,8 +82,8 @@ export default function InquiryPanel() {
             <div key={i} className="item-row">
               <div>
                 <strong>{it.description}</strong>
-                {Object.keys(it.specifications).length ? (
-                  <small>{JSON.stringify(it.specifications)}</small>
+                {Object.keys(it.specifications).length > 0 ? (
+                  <small> {JSON.stringify(it.specifications)}</small>
                 ) : null}
               </div>
               <strong>{it.quantity} pcs</strong>

@@ -1,22 +1,26 @@
 // src/services/priceListService.js
-// Service to load price list and provide price lookup by description (or SKU)
+// Service to load price list and provide price lookup by description (or SKU).
+// Uses a Vite static JSON import so the file is bundled correctly in both dev
+// and production builds (avoids the /src/data/... URL which only works in dev).
 
-export async function loadPriceList() {
-  // In a real app this might fetch from an API; here we import the static JSON.
-  const response = await fetch('/src/data/priceList.json');
-  if (!response.ok) {
-    throw new Error('Failed to load price list');
-  }
-  return response.json();
+let _cache = null;
+
+async function loadPriceList() {
+  if (_cache) return _cache;
+  // Vite resolves this import at build time and includes the JSON in the bundle.
+  const mod = await import('../data/priceList.json');
+  _cache = mod.default;
+  return _cache;
 }
 
 /**
- * Find price entry for a given description (case‑insensitive substring match).
+ * Find a price entry for a given description (case-insensitive substring match).
  * Returns the matching entry or null if not found.
  */
 export async function findPriceByDescription(description) {
   const list = await loadPriceList();
   const lowered = description.toLowerCase();
-  const match = list.find(item => item.description.toLowerCase().includes(lowered));
-  return match || null;
+  return list.find(item => item.description.toLowerCase().includes(lowered)) || null;
 }
+
+export { loadPriceList };

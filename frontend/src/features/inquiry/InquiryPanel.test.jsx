@@ -1,14 +1,21 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import InquiryPanel from './InquiryPanel.jsx';
 
 // Mock fetch globally for this test suite
-global.fetch = jest.fn(() =>
+global.fetch = vi.fn(() =>
   Promise.resolve({
     ok: true,
     json: () =>
       Promise.resolve({
         items: [
-          { description: 'Large box', quantity: 500, unit: 'pcs', specifications: {}, sku: null },
+          {
+            description: 'Large box',
+            quantity: 500,
+            unit: 'pcs',
+            specifications: {},
+            sku: null,
+          },
         ],
         missing_fields: ['dimensions/SKU for smaller item'],
         warnings: [],

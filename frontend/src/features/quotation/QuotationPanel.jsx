@@ -1,18 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function QuotationPanel() {
   // Load static price list (could be from an API in real app)
-  const [priceList, setPriceList] = React.useState([]);
-  const [items, setItems] = React.useState([
+  const [priceList, setPriceList] = useState([]);
+  const [items, setItems] = useState([
     { description: 'Large box', sku: 'DEMO001', qty: 500, unitPrice: 24 },
-    { description: 'Small box', sku: 'SMALL001', qty: 0, unitPrice: 12 }
+    { description: 'Small box', sku: 'SMALL001', qty: 0, unitPrice: 12 },
   ]);
-  const [taxRate, setTaxRate] = React.useState(18);
-  const [approved, setApproved] = React.useState(false);
+  const [taxRate, setTaxRate] = useState(18);
+  const [approved, setApproved] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  // Load price list JSON placed under src/data
+  // Load price list JSON placed under src/data — fixed relative path
   useEffect(() => {
-    import('../data/priceList.json')
+    import('../../data/priceList.json')
       .then(mod => setPriceList(mod.default))
       .catch(() => setPriceList([]));
   }, []);
@@ -22,18 +23,30 @@ export default function QuotationPanel() {
     newItems[index][field] = Number(value);
     setItems(newItems);
     setApproved(false);
+    setSaved(false);
   };
 
   const subtotal = items.reduce((sum, it) => sum + (it.qty || 0) * (it.unitPrice || 0), 0);
   const tax = subtotal * Math.max(0, Number(taxRate) || 0) / 100;
-  const money = n => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n);
+  const money = n =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 2,
+    }).format(n);
   const canApprove = items.every(it => it.qty > 0 && it.unitPrice > 0);
+
+  function handleSave() {
+    // In a real app this would POST to the backend; here we just record that
+    // the user has reviewed the current values.
+    setSaved(true);
+  }
 
   return (
     <section className="panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">CONTRIBUTOR B · VALIDATION & APPROVAL</p>
+          <p className="eyebrow">CONTRIBUTOR B · VALIDATION &amp; APPROVAL</p>
           <h2>Quotation review</h2>
         </div>
         <span className={approved ? 'status success' : 'status warning'}>
@@ -52,18 +65,33 @@ export default function QuotationPanel() {
       {items.map((it, idx) => (
         <div className="table-line" key={it.sku}>
           <div><strong>{it.description}</strong><small>{it.sku}</small></div>
-          <input aria-label="Quantity" type="number" min="0" value={it.qty}
-                 onChange={e => updateItem(idx, 'qty', e.target.value)} />
-          <input aria-label="Unit price in rupees" type="number" min="0" value={it.unitPrice}
-                 onChange={e => updateItem(idx, 'unitPrice', e.target.value)} />
+          <input
+            aria-label="Quantity"
+            type="number"
+            min="0"
+            value={it.qty}
+            onChange={e => updateItem(idx, 'qty', e.target.value)}
+          />
+          <input
+            aria-label="Unit price in rupees"
+            type="number"
+            min="0"
+            value={it.unitPrice}
+            onChange={e => updateItem(idx, 'unitPrice', e.target.value)}
+          />
           <strong>{money(it.qty * it.unitPrice)}</strong>
         </div>
       ))}
 
       <div className="tax-row">
         <label>Tax rate (%)
-          <input type="number" min="0" max="100" value={taxRate}
-                 onChange={e => { setTaxRate(e.target.value); setApproved(false); }} />
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={taxRate}
+            onChange={e => { setTaxRate(e.target.value); setApproved(false); setSaved(false); }}
+          />
         </label>
         <div className="totals">
           <div><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
@@ -72,10 +100,19 @@ export default function QuotationPanel() {
         </div>
       </div>
 
-      <button className="primary" onClick={() => setApproved(false)}>Save review changes</button>
-      <button className="secondary" disabled={!canApprove} onClick={() => setApproved(true)}>Approve demo line</button>
+      <div className="actions">
+        <button className="secondary" onClick={handleSave}>
+          {saved ? 'Changes saved ✓' : 'Save review changes'}
+        </button>
+        <button className="primary" disabled={!canApprove} onClick={() => setApproved(true)}>
+          Approve demo line
+        </button>
+      </div>
 
-      <p className="muted">Demo calculation only. Tax rate and unit price are editable assumptions; unresolved lines must be completed before a real quote is approved.</p>
+      <p className="muted">
+        Demo calculation only. Tax rate and unit price are editable assumptions;
+        unresolved lines must be completed before a real quote is approved.
+      </p>
     </section>
   );
 }
