@@ -1,4 +1,4 @@
 [
-  {"sku": "DEMO001", "description": "Large box", "unitPrice": 24},
-  {"sku": "SMALL001", "description": "Small box", "unitPrice": 12}
+  {"sku": "DEMO001", "backendSku": "BOX-L", "description": "Large box", "unitPrice": 24, "unit": "pcs", "specs": "12x10x8, 3-ply"},
+  {"sku": "SMALL001", "backendSku": "BOX-S", "description": "Small box", "unitPrice": 12, "unit": "pcs", "specs": "8x6x4, 3-ply"}
 ]
