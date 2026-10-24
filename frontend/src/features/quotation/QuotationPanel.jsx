@@ -1,39 +1,70 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import priceListData from '../../data/priceList.json';
 
 /**
- * QuotationPanel — Contributor B
+ * QuotationPanel — Contributor B (Integrated)
  *
  * Editable quote table with review / approve / reject flow.
  * Matches extracted descriptions to known SKUs from the sample price list.
  * Calculates subtotal, configured tax and total in code (not in an LLM).
  * Blocks approval when any required field (qty, unitPrice) is unresolved.
  */
-export default function QuotationPanel() {
-  const [priceList, setPriceList] = React.useState([]);
-  const [items, setItems] = React.useState([
+export default function QuotationPanel({ initialItems, onRecordEvent }) {
+  const [priceList, setPriceList] = useState([]);
+  const [items, setItems] = useState([
     { description: 'Large box', sku: '', qty: 500, unitPrice: 0, matched: false },
     { description: 'Small box', sku: '', qty: 0, unitPrice: 0, matched: false },
   ]);
-  const [taxRate, setTaxRate] = React.useState(18);
-  const [status, setStatus] = React.useState('draft'); // draft | approved | rejected
+  const [taxRate, setTaxRate] = useState(18);
+  const [status, setStatus] = useState('draft'); // draft | approved | rejected
 
   // Load the static price list
   useEffect(() => {
     setPriceList(priceListData);
   }, []);
 
-  // When price list is loaded, enrich items with SKU & unitPrice via description matching
+  // Accept items from upstream Inquiry extraction if provided
+  useEffect(() => {
+    if (initialItems && initialItems.length > 0) {
+      const formatted = initialItems.map(it => ({
+        description: it.description || 'Custom item',
+        sku: it.sku || '',
+        qty: it.quantity || 0,
+        unitPrice: it.unitPrice || 0,
+        matched: false,
+      }));
+      setItems(formatted);
+      setStatus('draft');
+      if (onRecordEvent) {
+        onRecordEvent({
+          id: `evt-${Date.now()}`,
+          event_type: 'draft_created',
+          title: 'Draft quote initialized from inquiry',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          details: `Imported ${formatted.length} line items from intake extraction`,
+        });
+      }
+    }
+  }, [initialItems]);
+
+  // When price list is loaded or items change, enrich items with SKU & unitPrice via description matching
   useEffect(() => {
     if (priceList.length === 0) return;
     setItems(prev =>
       prev.map(it => {
-        if (it.matched) return it; // already matched, don't overwrite user edits
+        if (it.matched && it.unitPrice > 0) return it; // already matched, preserve edits
         const match = priceList.find(
-          p => p.description.toLowerCase() === it.description.toLowerCase()
+          p =>
+            p.description.toLowerCase().includes(it.description.toLowerCase()) ||
+            it.description.toLowerCase().includes(p.description.toLowerCase())
         );
         if (match) {
-          return { ...it, sku: match.sku, unitPrice: match.unitPrice, matched: true };
+          return {
+            ...it,
+            sku: match.sku,
+            unitPrice: it.unitPrice > 0 ? it.unitPrice : match.unitPrice,
+            matched: true,
+          };
         }
         return it;
       })
@@ -43,7 +74,20 @@ export default function QuotationPanel() {
   const updateItem = (index, field, value) => {
     setItems(prev => {
       const newItems = [...prev];
-      newItems[index] = { ...newItems[index], [field]: Number(value) };
+      const prevVal = newItems[index][field];
+      const nextVal = Number(value);
+      newItems[index] = { ...newItems[index], [field]: nextVal };
+
+      // Check if a zero quantity or price was just resolved
+      if (prevVal === 0 && nextVal > 0 && onRecordEvent) {
+        onRecordEvent({
+          id: `evt-${Date.now()}`,
+          event_type: 'warning_resolved',
+          title: `Resolved specification: ${newItems[index].description}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          details: `Set ${field} to ${nextVal}`,
+        });
+      }
       return newItems;
     });
     setStatus('draft');
@@ -67,6 +111,55 @@ export default function QuotationPanel() {
   // Approval is blocked when any item has qty <= 0 or unitPrice <= 0
   const unresolvedItems = items.filter(it => !(it.qty > 0 && it.unitPrice > 0));
   const canApprove = unresolvedItems.length === 0 && items.length > 0;
+
+  function handleApprove() {
+    setStatus('approved');
+    const evt = {
+      id: `evt-${Date.now()}`,
+      event_type: 'approved',
+      title: 'Quotation approved by reviewer',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      details: `Approved total: ${money(total)} (${items.length} verified lines)`,
+    };
+    if (onRecordEvent) onRecordEvent(evt);
+    // Post to backend audit trail API
+    fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quote_id: 'quote-001', event_type: 'approved', details: { total, items: items.length } }),
+    }).catch(() => {});
+  }
+
+  function handleReject() {
+    setStatus('rejected');
+    const evt = {
+      id: `evt-${Date.now()}`,
+      event_type: 'rejected',
+      title: 'Quotation rejected by reviewer',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      details: `Rejected quote with subtotal ${money(subtotal)}`,
+    };
+    if (onRecordEvent) onRecordEvent(evt);
+    // Post to backend audit trail API
+    fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quote_id: 'quote-001', event_type: 'rejected', details: { total } }),
+    }).catch(() => {});
+  }
+
+  function handleSaveReview() {
+    setStatus('draft');
+    if (onRecordEvent) {
+      onRecordEvent({
+        id: `evt-${Date.now()}`,
+        event_type: 'fields_edited',
+        title: 'Review changes saved',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        details: `Updated lines: Subtotal ${money(subtotal)}, Tax ${safeTaxRate}%`,
+      });
+    }
+  }
 
   return (
     <section className="panel">
@@ -167,19 +260,19 @@ export default function QuotationPanel() {
 
       {/* Action buttons — review / approve / reject */}
       <div className="actions">
-        <button className="primary" onClick={() => setStatus('draft')}>
+        <button className="primary" onClick={handleSaveReview}>
           Save review changes
         </button>{' '}
         <button
           className="secondary"
           disabled={!canApprove}
-          onClick={() => setStatus('approved')}
+          onClick={handleApprove}
         >
           Approve
         </button>{' '}
         <button
           className="secondary"
-          onClick={() => setStatus('rejected')}
+          onClick={handleReject}
           style={{ borderColor: '#e2a0a0', color: '#a03030' }}
         >
           Reject

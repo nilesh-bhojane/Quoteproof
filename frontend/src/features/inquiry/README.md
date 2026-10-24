@@ -1,31 +1,37 @@
-# Inquiry Extraction (Contributor A)
+# Inquiry Extraction (Contributor A)
 
 ## Overview
-The **InquiryPanel** component lets a user paste a raw customer message, calls the backend `/api/extract` endpoint, and displays a deterministic extraction preview.
+The **InquiryPanel** component enables intake of raw customer messages, parses them into structured line items (description, quantity, unit, specifications), detects ambiguous or missing fields, and enforces the core principle: **never invent prices**.
 
 ## Features
-- Paste‑inquiry UI with a sample loader.
-- Live extraction via `fetch('/api/extract')`.
-- UI states: loading, error, and empty‑result handling.
-- Missing‑field detection – highlighted for reviewer action.
+- **Sample Inquiry Selector:** Dropdown with multiple realistic business scenarios (standard mix, large bulk, ambiguous specs).
+- **Structured Extraction:** Parses line items with quantities, units, and optional specifications.
+- **Missing Field Detection:** Flags missing dimensions/SKUs (e.g. "smaller ones") for human review.
+- **Workflow Handoff:** Provides seamless "Send to Quotation Review" handoff into Contributor B's validation table.
+- **States:** Handles empty text, parsing progress, and error/offline conditions.
 
-## Screenshot (placeholder)
-> *Insert a screenshot of the panel after a successful extraction here.*
-
-## Development
-```bash
-# Frontend
-npm run dev   # serves on http://localhost:3000
-
-# Backend
-uvicorn backend.app.main:app --reload
+## API Contract
+**POST `/api/extract`**
+```json
+{
+  "inquiry_text": "Need 500 boxes 12x10x8, 3-ply, and 200 smaller ones."
+}
+```
+Response:
+```json
+{
+  "items": [
+    {"description": "boxes 12x10x8", "quantity": 500, "unit": "pcs", "specifications": {"note": "3-ply"}, "sku": null},
+    {"description": "smaller ones", "quantity": 200, "unit": "pcs", "specifications": {}, "sku": null}
+  ],
+  "missing_fields": ["dimensions/SKU for smaller item"],
+  "warnings": ["Starter parser only: verify every extracted field."]
+}
 ```
 
-Run the tests:
+## Running Tests
 ```bash
-# Backend
-pytest backend/app/tests
-
-# Frontend
-npm test
+# Backend pytest
+cd backend
+python -m pytest app/tests/test_extraction.py -v
 ```
