@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, Numeric, Integer, Boolean, DateTime, JSON
+from sqlalchemy.dialects.postgresql import ARRAY
 from app.db.session import Base, GUID
 
 
@@ -9,7 +10,7 @@ class Product(Base):
 
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False, index=True)
-    aliases = Column(JSON, nullable=False, default=list)
+    aliases = Column(ARRAY(String).with_variant(JSON, "sqlite"), nullable=False, default=list)
     unit = Column(String, nullable=False, default="pcs")
     sell_price = Column(Numeric(12, 2), nullable=False)
     cost_price = Column(Numeric(12, 2), nullable=False)
