@@ -80,12 +80,11 @@ def init_db():
     from app.models.product import Product
     from app.services.draft_service import FALLBACK_CATALOG
 
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
     try:
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
         if db.query(Product).count() == 0:
             for item in FALLBACK_CATALOG:
-                # Ensure bulk_tiers has json-serializable floats/strings
                 tiers = []
                 for t in item.get("bulk_tiers", []):
                     tiers.append({
@@ -108,13 +107,9 @@ def init_db():
                 )
                 db.add(p)
             db.commit()
+            db.close()
     except Exception:
-        db.rollback()
-    finally:
-        db.close()
-
-
-init_db()
+        pass
 
 
 def get_db():
