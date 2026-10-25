@@ -255,12 +255,73 @@ def reject_quote(quote_id: str, req: RejectRequest, db: Optional[Session] = Depe
 
 
 @v1_router.get("/quotes")
-def list_quotes():
+def list_quotes(db: Optional[Session] = Depends(get_db)):
+    if db:
+        db_quotes = db.query(Quote).order_by(Quote.created_at.desc()).all()
+        if db_quotes:
+            return [
+                {
+                    "id": str(q.id),
+                    "status": q.status,
+                    "inquiry_masked": q.inquiry_masked,
+                    "subtotal": float(q.subtotal or 0),
+                    "gst": float(q.gst or 0),
+                    "total": float(q.total or 0),
+                    "approved_by": q.approved_by,
+                    "approved_at": q.approved_at.isoformat() if q.approved_at else None,
+                    "created_at": q.created_at.isoformat() if q.created_at else None,
+                    "items": [
+                        {
+                            "id": str(it.id),
+                            "description": it.raw_text,
+                            "qty": float(it.qty or 0),
+                            "unit": it.unit,
+                            "unit_price_snapshot": float(it.unit_price_snapshot or 0),
+                            "line_total": float(it.line_total or 0),
+                            "stock_status": it.stock_status,
+                            "explain_text": it.explain_text,
+                        }
+                        for it in q.items
+                    ],
+                }
+                for q in db_quotes
+            ]
     return list(_IN_MEMORY_QUOTES.values())
 
 
 @v1_router.get("/quotes/{quote_id}")
-def get_quote_detail(quote_id: str):
+def get_quote_detail(quote_id: str, db: Optional[Session] = Depends(get_db)):
+    if db:
+        try:
+            q_uuid = uuid.UUID(quote_id)
+            db_quote = db.query(Quote).filter(Quote.id == q_uuid).first()
+            if db_quote:
+                return {
+                    "id": str(db_quote.id),
+                    "status": db_quote.status,
+                    "inquiry_masked": db_quote.inquiry_masked,
+                    "subtotal": float(db_quote.subtotal or 0),
+                    "gst": float(db_quote.gst or 0),
+                    "total": float(db_quote.total or 0),
+                    "approved_by": db_quote.approved_by,
+                    "approved_at": db_quote.approved_at.isoformat() if db_quote.approved_at else None,
+                    "created_at": db_quote.created_at.isoformat() if db_quote.created_at else None,
+                    "items": [
+                        {
+                            "id": str(it.id),
+                            "description": it.raw_text,
+                            "qty": float(it.qty or 0),
+                            "unit": it.unit,
+                            "unit_price_snapshot": float(it.unit_price_snapshot or 0),
+                            "line_total": float(it.line_total or 0),
+                            "stock_status": it.stock_status,
+                            "explain_text": it.explain_text,
+                        }
+                        for it in db_quote.items
+                    ],
+                }
+        except Exception:
+            pass
     if quote_id in _IN_MEMORY_QUOTES:
         return _IN_MEMORY_QUOTES[quote_id]
     raise HTTPException(status_code=404, detail="Quote not found")

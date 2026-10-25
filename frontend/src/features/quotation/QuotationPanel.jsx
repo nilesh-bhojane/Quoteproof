@@ -13,17 +13,47 @@ import Timer from './Timer.jsx';
 export default function QuotationPanel({ initialItems, onRecordEvent }) {
   const [priceList, setPriceList] = useState([]);
   const [items, setItems] = useState([
-    { description: 'Large box', sku: '', qty: 500, unitPrice: 0, matched: false },
-    { description: 'Small box', sku: '', qty: 0, unitPrice: 0, matched: false },
+    { description: 'Large box', sku: 'DEMO001', qty: 500, unitPrice: 24, matched: true },
+    { description: 'Small box', sku: 'SMALL001', qty: 0, unitPrice: 12, matched: true },
   ]);
+  const [quoteHistory, setQuoteHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [taxRate, setTaxRate] = useState(18);
   const [status, setStatus] = useState('draft'); // draft | approved | rejected
   const [approvedBy, setApprovedBy] = useState('Karan Sapate');
 
-  // Load the static price list
+  // Load the static price list and past quotes history from database
   useEffect(() => {
     setPriceList(priceListData);
+    loadHistory();
   }, []);
+
+  function loadHistory() {
+    setLoadingHistory(true);
+    fetch('/api/v1/quotes')
+      .then(res => (res.ok ? res.json() : []))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setQuoteHistory(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingHistory(false));
+  }
+
+  function loadQuoteFromHistory(q) {
+    if (q && q.items && q.items.length > 0) {
+      const formatted = q.items.map(it => ({
+        description: it.description || 'Item',
+        sku: it.id || '',
+        qty: Number(it.qty) || 0,
+        unitPrice: Number(it.unit_price_snapshot) || 0,
+        matched: true,
+      }));
+      setItems(formatted);
+      setStatus(q.status || 'draft');
+    }
+  }
 
   // Accept items from upstream Inquiry extraction if provided
   useEffect(() => {
@@ -296,9 +326,57 @@ export default function QuotationPanel({ initialItems, onRecordEvent }) {
         </button>
       </div>
 
-      <p className="muted">
-        Demo calculation only. Tax rate and unit price are editable assumptions;
-        unresolved lines must be completed before a real quote is approved.
+      {/* Past Quotes History */}
+      <div style={{ marginTop: 28, paddingTop: 18, borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#1e293b' }}>
+            Past Quotes History ({quoteHistory.length})
+          </h3>
+          <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 11 }} onClick={loadHistory}>
+            ↻ Refresh History
+          </button>
+        </div>
+
+        {quoteHistory.length === 0 ? (
+          <p className="muted">No past quotes recorded yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {quoteHistory.slice(0, 8).map(q => (
+              <div
+                key={q.id}
+                onClick={() => loadQuoteFromHistory(q)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 14px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  fontSize: 12,
+                }}
+              >
+                <div>
+                  <strong>{q.inquiry_masked ? q.inquiry_masked.slice(0, 45) + '…' : `Quote #${q.id.slice(0, 8)}`}</strong>
+                  <div style={{ color: '#64748b', fontSize: 11, marginTop: 2 }}>
+                    {q.items ? `${q.items.length} line item(s)` : 'Items unlisted'} · {q.created_at ? new Date(q.created_at).toLocaleDateString() : 'Recent'}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className={`status ${q.status === 'approved' ? 'success' : q.status === 'rejected' ? 'warning' : ''}`}>
+                    {q.status}
+                  </span>
+                  <strong style={{ fontSize: 13 }}>{money(q.total)}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <p className="muted" style={{ marginTop: 16 }}>
+        Immutable snapshot rule: Approved quotations cannot be altered. Corrections create new revision events.
       </p>
     </section>
   );
