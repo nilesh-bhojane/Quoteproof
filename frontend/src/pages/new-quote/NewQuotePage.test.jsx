@@ -49,22 +49,6 @@ describe('NewQuotePage', () => {
     expect(screen.getByText(/Check & Draft Quote/i)).toBeTruthy();
   });
 
-  it('shows sample selector with options', () => {
-    render(<NewQuotePage />);
-    const select = screen.getByRole('combobox');
-    expect(select).toBeTruthy();
-    // At least 5 options (placeholder + 4 samples)
-    expect(select.options.length).toBeGreaterThanOrEqual(5);
-  });
-
-  it('loads sample text when selected', async () => {
-    render(<NewQuotePage />);
-    const select = screen.getByRole('combobox');
-    fireEvent.change(select, { target: { value: 's1' } });
-    const textarea = screen.getByPlaceholderText(/paste the customer/i);
-    expect(textarea.value).toContain('3-ply');
-  });
-
   it('shows error when inquiry is empty and draft is clicked', async () => {
     render(<NewQuotePage />);
     fireEvent.click(screen.getByText(/Check & Draft Quote/i));
@@ -76,8 +60,9 @@ describe('NewQuotePage', () => {
   it('calls /api/v1/quotes/draft with basic mode and renders draft table', async () => {
     render(<NewQuotePage />);
 
-    // Load a sample
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 's1' } });
+    // Type custom inquiry
+    const textarea = screen.getByPlaceholderText(/paste the customer/i);
+    fireEvent.change(textarea, { target: { value: 'Need 100 boxes 12x10x8' } });
 
     // Enable basic mode
     fireEvent.click(screen.getByRole('checkbox'));
@@ -102,7 +87,8 @@ describe('NewQuotePage', () => {
 
   it('shows In Stock badge for ok stock status', async () => {
     render(<NewQuotePage />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 's1' } });
+    const textarea = screen.getByPlaceholderText(/paste the customer/i);
+    fireEvent.change(textarea, { target: { value: 'Need 100 boxes 12x10x8' } });
     fireEvent.click(screen.getByText(/Check & Draft Quote/i));
     await waitFor(() => {
       expect(screen.getByText(/✓ In Stock/i)).toBeTruthy();
@@ -111,7 +97,8 @@ describe('NewQuotePage', () => {
 
   it('shows approval ready banner when can_approve is true', async () => {
     render(<NewQuotePage />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 's1' } });
+    const textarea = screen.getByPlaceholderText(/paste the customer/i);
+    fireEvent.change(textarea, { target: { value: 'Need 100 boxes 12x10x8' } });
     fireEvent.click(screen.getByText(/Check & Draft Quote/i));
     await waitFor(() => {
       expect(screen.getByText(/ready for approval/i)).toBeTruthy();
@@ -137,7 +124,8 @@ describe('NewQuotePage', () => {
     });
 
     render(<NewQuotePage />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 's4' } });
+    const textarea = screen.getByPlaceholderText(/paste the customer/i);
+    fireEvent.change(textarea, { target: { value: 'Need some boxes' } });
     fireEvent.click(screen.getByText(/Check & Draft Quote/i));
     await waitFor(() => {
       expect(screen.getByText(/blocking flag/i)).toBeTruthy();
@@ -173,7 +161,8 @@ describe('NewQuotePage', () => {
     });
 
     render(<NewQuotePage />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 's2' } });
+    const textarea = screen.getByPlaceholderText(/paste the customer/i);
+    fireEvent.change(textarea, { target: { value: 'Need 500 boxes' } });
     fireEvent.click(screen.getByText(/Check & Draft Quote/i));
 
     await waitFor(() => {
@@ -186,7 +175,8 @@ describe('NewQuotePage', () => {
   it('calls onSendToReview when Send to Review is clicked', async () => {
     const mockSend = vi.fn();
     render(<NewQuotePage onSendToReview={mockSend} />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 's1' } });
+    const textarea = screen.getByPlaceholderText(/paste the customer/i);
+    fireEvent.change(textarea, { target: { value: 'Need 100 boxes 12x10x8' } });
     fireEvent.click(screen.getByText(/Check & Draft Quote/i));
 
     await waitFor(() => {
